@@ -1,35 +1,61 @@
 # CorpHelper - 企业级分布式多Agent助手
 
-适合应届生的企业级AI Agent项目，支持RAG + 多Agent协作 + Celery分布式任务队列。
+**学生打造的企业级 AI Agent 实战项目**  
+支持 **RAG + 多Agent协作 + Celery 分布式任务队列 + Docker 一键部署**，完美复刻公司内部知识助手生产架构。
 
-## 快速启动
-1. 复制 `.env.example` 为 `.env` 并填入 OPENAI_API_KEY
-2. 在 `docs/` 文件夹放入企业文档（pdf/txt/md）
-3. 执行：
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue) 
+![Docker](https://img.shields.io/badge/Docker-Ready-green)
+![CrewAI](https://img.shields.io/badge/CrewAI-Multi--Agent-orange)
+
+## ✨ 核心特性
+- **企业级 RAG**：自动读取 `docs/` 文件夹里的 PDF/TXT/MD，作为公司知识库
+- **多Agent协作**：Researcher → Analyst → Writer 三角色流水线（CrewAI）
+- **分布式任务**：Celery + Redis 支持水平扩容（`--scale worker=10`）
+- **混合检索**：公司内部文档 + DuckDuckGo 外部搜索
+- **异步前端**：Streamlit + FastAPI + 实时轮询结果
+- **一键部署**：`docker compose up` 即可本地或服务器运行
+
+## 🚀 快速启动（3 分钟跑通）
+
+1. 克隆项目
    ```bash
-   docker compose up --build --scale worker=2
+   git clone https://github.com/newone-aka-willbestar/corphelper.git
+   cd corphelper
 
----
-
-### 运行步骤（超级简单）
-1. 把上面所有文件按目录结构放好。
-2. `docs/` 文件夹里放几份测试文档（例如新建 `company_policy.txt` 写点公司政策）。
-3. `cp .env.example .env` 并填入你的 OpenAI Key。
-4. 在项目根目录运行：
-   ```bash
-   docker compose up --build --scale worker=2
-
-
-
-
-### 逻辑架构
-（Streamlit UI） 
+## 🏗️ 架构图
+Streamlit UI (前端)
     ↓ HTTP POST
-FastAPI Gateway (api.py) 
+FastAPI Gateway (api.py)
     ↓ Celery Task Queue (Redis Broker)
-Celery Worker × N （分布式节点） 
-    ↓ 执行 CrewAI 多Agent
-        → RAG Tool（Chroma）检索企业文档
-        → DuckDuckGo 外部搜索
-    ↓ 返回报告
-Redis Backend 存储结果 → Streamlit 轮询展示
+Celery Worker × N（可分布式部署）
+    ↓
+CrewAI 多Agent 流水线
+    ├── Researcher → RAG Tool (Chroma) + DuckDuckGo
+    ├── Analyst     → 结构化洞见提取
+    └── Writer      → Markdown 专业报告
+    ↓
+Redis Backend 存储结果 → Streamlit 实时展示
+
+
+## 🛠️ 技术栈
+前端：Streamlit
+后端：FastAPI
+Agent 框架：CrewAI + LangChain
+向量数据库：Chroma（可轻松替换为 PGVector）
+任务队列：Celery + Redis
+搜索工具：DuckDuckGo
+部署：Docker + docker-compose
+
+## 📋 未来规划（Roadmap）
+ 支持 LangGraph（状态机 + human-in-the-loop）（）
+ Prompt 工程模板化（prompts.yaml 可配置）（）
+ 多 LLM 支持（LiteLLM + 通义千问/DeepSeek）（）
+ 生产级向量库（PGVector / Qdrant）（）
+ 监控 + 日志（LangSmith + Prometheus）（）
+ JWT 鉴权 + 多租户（）
+ CI/CD + 单元测试（）
+
+欢迎 Star ⭐ 并提交 Issue / PR！
+这个项目会持续迭代，成为应届生最好的企业级 AI Agent 学习模板。
+
+
