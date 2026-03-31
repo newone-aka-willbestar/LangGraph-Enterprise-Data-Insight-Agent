@@ -1,18 +1,24 @@
+# crew.py - 最终版（已移除迭代限制和时间限制）
+
 import os
+from dotenv import load_dotenv
+load_dotenv()   # 确保读取 .env
+
 from crewai import Agent, Task, Crew, Process
 from langchain_openai import ChatOpenAI
 from tools.rag_tool import company_knowledge_search
 from langchain_community.tools import DuckDuckGoSearchRun
 
-# ==================== LLM 配置 ====================
 llm = ChatOpenAI(
     model="gpt-4o-mini",
-    temperature=0.3
+    temperature=0.3,
+    timeout=120,          # 增加超时时间
+    max_retries=3
 )
 
 search_tool = DuckDuckGoSearchRun()
 
-# ==================== Agents ====================
+# ==================== Agents（已移除限制） ====================
 researcher = Agent(
     role="企业知识检索专员",
     goal="精准收集公司内部和外部相关事实",
@@ -21,6 +27,8 @@ researcher = Agent(
     llm=llm,
     verbose=True,
     allow_delegation=False,
+    max_iter=100,                  # ← 解除迭代限制
+    max_execution_time=None,       # ← 解除时间限制（None 表示无限制）
 )
 
 analyst = Agent(
@@ -30,6 +38,8 @@ analyst = Agent(
     llm=llm,
     verbose=True,
     allow_delegation=False,
+    max_iter=100,
+    max_execution_time=None,
 )
 
 writer = Agent(
@@ -39,6 +49,8 @@ writer = Agent(
     llm=llm,
     verbose=True,
     allow_delegation=False,
+    max_iter=100,
+    max_execution_time=None,
 )
 
 # ==================== Tasks ====================
@@ -65,8 +77,8 @@ def create_crew(query: str):
         agents=[researcher, analyst, writer],
         tasks=[task1, task2, task3],
         process=Process.sequential,
-        verbose=True,           
-        memory=True,
+        verbose=True,
+        memory=False,      # 保持关闭，避免之前 embedding 超时
         cache=True,
     )
     return crew
