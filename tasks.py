@@ -5,11 +5,9 @@ import os
 
 load_dotenv()
 
-celery_app = Celery(
-    "corphelper",
-    broker="redis://redis:6379/0",
-    backend="redis://redis:6379/1"
-)
+app = Celery("corphelper", 
+             broker="redis://localhost:6379/0", 
+             backend="redis://localhost:6379/1")
 
 celery_app.conf.update(
     task_serializer="json",
