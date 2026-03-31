@@ -4,10 +4,15 @@ from langchain_openai import ChatOpenAI
 from tools.rag_tool import company_knowledge_search
 from langchain_community.tools import DuckDuckGoSearchRun
 
-llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.3)
+# ==================== LLM 配置 ====================
+llm = ChatOpenAI(
+    model="gpt-4o-mini",
+    temperature=0.3
+)
 
 search_tool = DuckDuckGoSearchRun()
 
+# ==================== Agents ====================
 researcher = Agent(
     role="企业知识检索专员",
     goal="精准收集公司内部和外部相关事实",
@@ -36,22 +41,23 @@ writer = Agent(
     allow_delegation=False,
 )
 
+# ==================== Tasks ====================
 def create_crew(query: str):
     task1 = Task(
         description=f"用户查询：{query}\n请使用工具收集所有相关事实并标注来源。",
-        expected_output="结构化信息列表",   # 简化！避免 Pydantic 验证失败
+        expected_output="结构化信息列表",
         agent=researcher
     )
 
     task2 = Task(
         description="基于第一步结果，提炼 3-5 个核心洞见。",
-        expected_output="商业洞见列表",      # 简化！
+        expected_output="商业洞见列表",
         agent=analyst
     )
 
     task3 = Task(
         description="把前面结果整理成一份专业报告。",
-        expected_output="完整的 Markdown 格式报告",   # 简化！
+        expected_output="完整的 Markdown 格式报告",
         agent=writer
     )
 
@@ -59,7 +65,7 @@ def create_crew(query: str):
         agents=[researcher, analyst, writer],
         tasks=[task1, task2, task3],
         process=Process.sequential,
-        verbose=2,
+        verbose=True,           
         memory=True,
         cache=True,
     )
