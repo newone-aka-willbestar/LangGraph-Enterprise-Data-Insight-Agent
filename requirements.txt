@@ -11,3 +11,4 @@ python-dotenv
 duckduckgo-search
 streamlit
 pydantic
+setuptools<82

@@ -1,7 +1,8 @@
-from fastapi import FastAPI, BackgroundTasks
+from fastapi import FastAPI
 from pydantic import BaseModel
 from tasks import run_crew_task
 from fastapi.middleware.cors import CORSMiddleware
+from celery.result import AsyncResult   # ← 必须加上这一行
 
 app = FastAPI(title="CorpHelper 企业分布式AI助手")
 
@@ -26,8 +27,18 @@ async def generate_report(request: QueryRequest):
 
 @app.get("/result/{task_id}")
 async def get_result(task_id: str):
-    result = run_crew_task.AsyncResult(task_id)
-    if result.ready():
-        return {"status": "completed", "report": result.get()}
+    task = AsyncResult(task_id)          # ← 使用正确的 AsyncResult
+    
+    if task.ready():
+        if task.failed():
+            return {
+                "status": "FAILURE",
+                "error": str(task.result) if task.result else "未知错误"
+            }
+        else:
+            return {
+                "status": "SUCCESS",
+                "result": task.result
+            }
     else:
-        return {"status": "processing"}
+        return {"status": "PENDING"}

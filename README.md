@@ -21,6 +21,16 @@
    ```bash
    git clone https://github.com/newone-aka-willbestar/corphelper.git
    cd corphelper
+## 本地运行
+# 终端1：Celery Worker（Windows 推荐加 --pool=threads）
+celery -A tasks worker --loglevel=info --pool=threads --concurrency=4
+
+# 终端2：FastAPI 后端
+uvicorn api:app --host 0.0.0.0 --port 8000 --reload
+
+# 终端3：Streamlit 前端
+streamlit run streamlit_app.py --server.port 8501
+
 
 ## 🏗️ 架构图
 Streamlit UI (前端)
