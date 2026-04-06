@@ -1,5 +1,6 @@
 # graph.py
 import os
+import time
 from typing import TypedDict, List, Annotated
 import operator
 from dotenv import load_dotenv
@@ -55,6 +56,28 @@ def reviewer_node(state: ResearchState):
     if len(res.content) < 200:
         return {"review_feedback": "内容太单薄，请增加行业背景和案例分析。"}
     return {"report": res.content, "review_feedback": "合格"}
+
+# --- 模拟思考，让演示更真实 ---
+def reviewer_node(state: ResearchState):
+    # 模拟思考延迟，让演示更真实
+    time.sleep(1.5) 
+    
+    # 逻辑微调：如果是第一轮(steps=1)，强制要求 Reviewer 提意见，触发回溯
+    if state["steps"] == 1:
+        return {
+            "review_feedback": "内容初稿已生成，但缺乏具体的行业案例和未来风险预测，请研究员补充。",
+            "steps": state["steps"] + 1
+        }
+    
+    # 第二轮以后才进入正式判断
+    prompt = f"请根据以下素材写一份专业的研报：\n{''.join(state['content'])}"
+    res = llm.invoke([SystemMessage(content=prompt)])
+    
+    return {
+        "report": res.content, 
+        "review_feedback": "合格",
+        "steps": state["steps"] + 1
+    }
 
 # --- 路由逻辑：判断是“打回重做”还是“完结” ---
 def route_after_review(state: ResearchState):
