@@ -1,36 +1,32 @@
 # app.py
 import streamlit as st
-from graph import app as graph_app
-from langchain_core.messages import HumanMessage
+from graph import app as agent_app
 
-st.set_page_config(page_title="DataInsight Agent v2.0", layout="wide")
-st.title("📊 企业多维数据智能助手")
+st.set_page_config(page_title="AI 行业深度调研助手", layout="wide")
+st.title("🔍 AI 行业深度调研 Agent")
+st.caption("多智能体协作：Planner -> Researcher -> Reviewer (闭环修正)")
 
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
-# 用户输入
-if prompt := st.chat_input("例如：哪个产品的销售额最高？"):
-    st.chat_message("user").write(prompt)
+if topic := st.chat_input("输入调研主题（例如：2024中国人形机器人产业趋势）"):
+    st.chat_message("user").write(topic)
     
-    with st.status("Agent 正在思考...", expanded=True) as status:
-        initial_state = {
-            "messages": [HumanMessage(content=prompt)],
-            "retry_count": 0
-        }
+    with st.status("Agent 正在多体协作中...", expanded=True) as status:
+        # 初始化
+        inputs = {"topic": topic, "steps": 0, "content": [], "review_feedback": ""}
         
-        # 运行 Agent 并监听事件
-        for event in graph_app.stream(initial_state):
+        for event in agent_app.stream(inputs):
             for node, output in event.items():
-                if "sql_query" in output:
-                    st.code(f"生成 SQL: {output['sql_query']}", language="sql")
-                if "execution_error" in output and output["execution_error"]:
-                    st.error(f"❌ 执行出错: {output['execution_error']}")
-                if "db_result" in output and output["db_result"]:
-                    st.success("✅ 查询成功，获取到数据")
+                if node == "planner":
+                    st.write("📝 **Planner**: 正在拆解调研大纲...")
+                elif node == "researcher":
+                    st.write("🌐 **Researcher**: 正在全网检索实时资料...")
+                elif node == "reviewer":
+                    if output.get("review_feedback") != "合格":
+                        st.warning(f"🧐 **Reviewer**: 发现内容不足，已打回重做...")
+                    else:
+                        st.success("✅ **Reviewer**: 审核通过，正在排版报告...")
         
-        result = graph_app.invoke(initial_state) # 最终拿结果
-        final_answer = result["messages"][-1].content
-        status.update(label="分析完成！", state="complete")
+        result = agent_app.invoke(inputs)
+        status.update(label="调研完成！", state="complete")
 
-    st.chat_message("assistant").write(final_answer)
+    st.markdown("### 📝 深度调研报告")
+    st.markdown(result["report"])

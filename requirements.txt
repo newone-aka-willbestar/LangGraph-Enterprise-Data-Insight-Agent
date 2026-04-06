@@ -1,21 +1,19 @@
 # --- Agent 核心框架 ---
-# LangGraph 是实现状态机、循环重试和自我修正逻辑的核心
+# LangGraph 用于构建带循环（Cycle）和状态管理（State）的多智能体协作流
 langgraph>=0.2.0
-# LangChain 核心协议与基础类
+# LangChain 核心协议，支持 0.3.x 最新生态
 langchain-core>=0.3.0
-# 使用 OpenAI 兼容模式调用 DeepSeek/Qwen 等国产模型
+# 用于通过 OpenAI 兼容接口调用 DeepSeek-V3 或 Qwen2.5
 langchain-openai>=0.2.0
 
-# --- 数据处理与数据库 ---
-# Pandas 用于将 SQL 查询结果转换为美观的表格
-pandas>=2.0.0
-# 处理本地文件路径与 API Key 管理
+# --- 环境管理与配置 ---
+# 解析 .env 文件中的 API Key 和环境变量
 python-dotenv>=1.0.0
 
-# --- 前端交互界面 ---
-# 构建 Agent 思考过程的可视化看板
+# --- 前端展示层 ---
+# 快速构建 Agent 决策链路的可视化看板
 streamlit>=1.30.0
 
-# --- 辅助工具 ---
-# 确保网络请求稳定性
+# --- 网络与辅助工具 ---
+# 处理异步网络请求（若后续接入真实搜索 API 如 Tavily 时需要）
 httpx>=0.27.0

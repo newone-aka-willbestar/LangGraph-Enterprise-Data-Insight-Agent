@@ -1,92 +1,85 @@
 # graph.py
 import os
-import sqlite3
-from typing import TypedDict, Annotated, Literal
+from typing import TypedDict, List, Annotated
+import operator
+from dotenv import load_dotenv
 from langgraph.graph import StateGraph, START, END
 from langchain_openai import ChatOpenAI
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+from langchain_core.messages import SystemMessage, HumanMessage
 
-# 1. 定义增强型状态
-class AgentState(TypedDict):
-    messages: list
-    sql_query: str | None
-    execution_error: str | None  # 记录 SQL 执行报错
-    db_result: str | None       # 记录查询结果
-    retry_count: int            # 重试次数，防止死循环
+load_dotenv()
 
-# 2. 初始化模型 (推荐使用 DeepSeek，兼容 OpenAI 格式)
+# 1. 定义状态 (State) - Agent 的共享记忆
+class ResearchState(TypedDict):
+    topic: str               # 调研主题
+    plan: List[str]          # 拆解后的任务列表
+    content: List[str]       # 搜集到的素材
+    report: str              # 最终生成的报告
+    review_feedback: str     # 审核反馈
+    steps: int               # 迭代次数，防止死循环
+
+# 2. 初始化 DeepSeek 模型
 llm = ChatOpenAI(
-    model="deepseek-chat", 
-    api_key=os.getenv("DEEPSEEK_API_KEY"), 
+    model="deepseek-chat",
+    api_key=os.getenv("DEEPSEEK_API_KEY"),
     base_url="https://api.deepseek.com",
-    temperature=0
+    temperature=0.3
 )
 
-# 数据库 DDL 信息（面试点：Prompt Engineering）
-DB_SCHEMA = """
-表: orders (订单表)
-- order_id: 订单ID
-- product_id: 产品ID
-- amount: 金额
-- order_date: 日期
+# --- 节点 A: Planner (拆解意图) ---
+def planner_node(state: ResearchState):
+    prompt = f"你是一个行业分析专家。请将用户的主题 '{state['topic']}' 拆解成3个深入调研的方向。"
+    # 强制要求 JSON 格式或列表格式
+    res = llm.invoke([SystemMessage(content=prompt)])
+    # 这里简化处理，直接存储
+    return {"plan": [res.content], "steps": 1}
 
-表: products (产品详情)
-- product_id: 产品ID
-- product_name: 产品名
-- category: 类别
-"""
+# --- 节点 B: Researcher (模拟搜索工具) ---
+def researcher_node(state: ResearchState):
+    # 面试时说：这里通过 Tool 调用了搜索 API (如 Tavily)
+    # 现在为了演示，我们模拟搜索到的数据
+    search_data = f"关于 {state['topic']} 的最新市场数据、技术突破和竞争格局..."
+    return {"content": [search_data]}
 
-# 节点 A: SQL 生成器
-def sql_generator_node(state: AgentState):
-    retry_prompt = f"\n上一次执行报错: {state.get('execution_error')}" if state.get('execution_error') else ""
+# --- 节点 C: Reviewer (审核与撰稿) ---
+def reviewer_node(state: ResearchState):
+    if state.get("review_feedback"):
+        # 如果有反馈，说明是重写
+        prompt = f"根据之前的反馈 '{state['review_feedback']}'，请重新完善这份关于 {state['topic']} 的深度研报。"
+    else:
+        prompt = f"请根据以下素材写一份专业的研报：\n{''.join(state['content'])}"
     
-    prompt = f"""你是一个 SQL 专家。请根据以下 Schema 编写 SQLite 查询语句来回答用户问题。
-    {DB_SCHEMA}
-    要求：仅返回 SQL 语句，不要有任何 Markdown 标记。
-    {retry_prompt}
-    用户问题：{state['messages'][0].content}"""
+    res = llm.invoke([SystemMessage(content=prompt)])
     
-    response = llm.invoke([SystemMessage(content=prompt)])
-    return {"sql_query": response.content.strip(), "retry_count": state.get("retry_count", 0) + 1}
+    # 模拟审核逻辑：如果字数太少，就认为不合格
+    if len(res.content) < 200:
+        return {"review_feedback": "内容太单薄，请增加行业背景和案例分析。"}
+    return {"report": res.content, "review_feedback": "合格"}
 
-# 节点 B: SQL 执行器（带错误捕获）
-def sql_executor_node(state: AgentState):
-    query = state["sql_query"]
-    try:
-        conn = sqlite3.connect("enterprise_data.db")
-        df = pd.read_sql_query(query, conn)
-        conn.close()
-        return {"db_result": df.to_string(), "execution_error": None}
-    except Exception as e:
-        return {"execution_error": str(e), "db_result": None}
+# --- 路由逻辑：判断是“打回重做”还是“完结” ---
+def route_after_review(state: ResearchState):
+    if state["review_feedback"] == "合格" or state["steps"] >= 3:
+        return "end"
+    return "researcher" # 没通过就回研究员节点补充内容
 
-# 节点 C: 数据洞察分析器
-def insight_node(state: AgentState):
-    prompt = f"基于查询结果：{state['db_result']}，请用专业中文总结回答用户问题。"
-    response = llm.invoke([HumanMessage(content=prompt)])
-    return {"messages": [response]}
+# 3. 构建 LangGraph 状态机
+workflow = StateGraph(ResearchState)
 
-# 路由逻辑：判断是否需要重试
-def should_retry(state: AgentState) -> Literal["sql_gen", "insight", "end"]:
-    if state.get("execution_error") and state.get("retry_count", 0) < 3:
-        return "sql_gen"  # 报错了且重试次数不到3次，回去重写
-    if state.get("db_result"):
-        return "insight"  # 执行成功，去分析
-    return "end"
+workflow.add_node("planner", planner_node)
+workflow.add_node("researcher", researcher_node)
+workflow.add_node("reviewer", reviewer_node)
 
-# 构建工作流
-workflow = StateGraph(AgentState)
-workflow.add_node("sql_gen", sql_generator_node)
-workflow.add_node("executor", sql_executor_node)
-workflow.add_node("insight", insight_node)
+workflow.set_entry_point("planner")
+workflow.add_edge("planner", "researcher")
+workflow.add_edge("researcher", "reviewer")
 
-workflow.set_entry_point("sql_gen")
-workflow.add_edge("sql_gen", "executor")
-workflow.add_conditional_edges("executor", should_retry, {
-    "sql_gen": "sql_gen", 
-    "insight": "insight",
-    "end": END
-})
-workflow.add_edge("insight", END)
+workflow.add_conditional_edges(
+    "reviewer",
+    route_after_review,
+    {
+        "end": END,
+        "researcher": "researcher"
+    }
+)
 
 app = workflow.compile()
