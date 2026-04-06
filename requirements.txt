@@ -1,0 +1,21 @@
+# --- Agent 核心框架 ---
+# LangGraph 是实现状态机、循环重试和自我修正逻辑的核心
+langgraph>=0.2.0
+# LangChain 核心协议与基础类
+langchain-core>=0.3.0
+# 使用 OpenAI 兼容模式调用 DeepSeek/Qwen 等国产模型
+langchain-openai>=0.2.0
+
+# --- 数据处理与数据库 ---
+# Pandas 用于将 SQL 查询结果转换为美观的表格
+pandas>=2.0.0
+# 处理本地文件路径与 API Key 管理
+python-dotenv>=1.0.0
+
+# --- 前端交互界面 ---
+# 构建 Agent 思考过程的可视化看板
+streamlit>=1.30.0
+
+# --- 辅助工具 ---
+# 确保网络请求稳定性
+httpx>=0.27.0
