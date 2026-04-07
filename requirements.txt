@@ -17,3 +17,9 @@ streamlit>=1.30.0
 # --- 网络与辅助工具 ---
 # 处理异步网络请求（若后续接入真实搜索 API 如 Tavily 时需要）
 httpx>=0.27.0
+tavily-python
+langchain-community
+
+# --- 后端接口层 ---
+fastapi
+uvicorn[standard]
