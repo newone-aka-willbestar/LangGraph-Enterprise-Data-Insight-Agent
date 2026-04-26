@@ -38,7 +38,10 @@ graph TD
 ## 🚀 快速启动
 ```bash
 # 1. 激活虚拟环境
+# Windows
 venv\Scripts\activate
+# macOS / Linux
+source venv/bin/activate
 # 2. 启动后端
 uvicorn backend.main:app --host 0.0.0.0 --port 8000 --workers 4 
 # 3. 运行 Streamlit 前端
